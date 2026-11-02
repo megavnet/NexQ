@@ -33,6 +33,7 @@ function OverlayMeetingHooks() {
   useMeetingTimer();
   useTranscript();    // transcript_final/update → local store
   useStreamBuffer();  // AI streaming events → local store
+  useCallLogCapture(false); // show call details here; launcher owns persistence
   useSTTStatus();     // STT connection status
   useDevLog();        // debug log entries
   return null;

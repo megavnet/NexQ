@@ -62,7 +62,7 @@ impl ContextBuilder {
 
         // RAG chunks (controlled by `includeRagChunks` per-action toggle)
         // top_k filtering already applied by caller before reaching here
-        if include_context && !context_text.is_empty() {
+        if include_context && !context_text.trim().is_empty() {
             user_parts.push(format!(
                 "## Reference Materials\n{}\n",
                 context_text
@@ -71,7 +71,7 @@ impl ContextBuilder {
 
         // Transcript (controlled by `includeTranscript` per-action toggle)
         // Window filtering already applied by caller (per-action or global window)
-        if include_transcript && !transcript_text.is_empty() {
+        if include_transcript && !transcript_text.trim().is_empty() {
             user_parts.push(format!(
                 "## Meeting Transcript (Recent)\n{}\n",
                 transcript_text
@@ -81,14 +81,14 @@ impl ContextBuilder {
         // User's typed question — always included when provided.
         // The user explicitly typed this, so it's always relevant.
         if let Some(q) = custom_question {
-            if !q.is_empty() {
+            if !q.trim().is_empty() {
                 user_parts.push(format!("## User's Question\n{}\n", q));
             }
         }
 
         // Detected question (controlled by `includeDetectedQuestion` per-action toggle)
         if include_question {
-            if let Some(q) = question {
+            if let Some(q) = question.filter(|q| !q.text.trim().is_empty()) {
                 user_parts.push(format!(
                     "## Detected Question (confidence: {:.0}%)\n{}\n",
                     q.confidence * 100.0,
@@ -104,5 +104,26 @@ impl ContextBuilder {
         });
 
         messages
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ContextBuilder;
+
+    #[test]
+    fn empty_inputs_produce_empty_user_message() {
+        let messages = ContextBuilder::new().build_prompt_with_config(
+            "system", "  ", None, "\n", Some(" "), true, true, true,
+        );
+        assert!(messages[1].content.is_empty());
+    }
+
+    #[test]
+    fn explicit_question_is_included_without_transcript() {
+        let messages = ContextBuilder::new().build_prompt_with_config(
+            "system", "", None, "", Some("Xin chao?"), true, true, true,
+        );
+        assert!(messages[1].content.contains("Xin chao?"));
     }
 }

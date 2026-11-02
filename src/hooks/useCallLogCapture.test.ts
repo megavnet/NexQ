@@ -86,6 +86,19 @@ describe("useCallLogCapture", () => {
     expect(handlers.end).toBeDefined();
   }
 
+  it("shows the overlay call log without saving a second copy", async () => {
+    renderHook(() => useCallLogCapture(false));
+    await act(async () => {});
+    act(() => {
+      start("overlay");
+      handlers.token({ token: "Hello", request_id: "overlay" });
+      handlers.end({ total_tokens: 1, latency_ms: 100, request_id: "overlay", cancelled: false });
+    });
+    expect(entry().status).toBe("complete");
+    expect(entry().responseContent).toBe("Hello");
+    expect(ipc.saveMeetingAiInteractions).not.toHaveBeenCalled();
+  });
+
   it("does not fail a slow answer: tokens after 30 s still complete and persist it", async () => {
     await mount();
     act(() => start("r1"));

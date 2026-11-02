@@ -9,6 +9,8 @@ import {
   Check,
   Globe,
   History,
+  MessageSquareText,
+  X,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -19,6 +21,7 @@ import { ColorPickerButton } from "../components/ColorPickerButton";
 import { ResponseProgress } from "./ResponseProgress";
 import { ResponseHistoryList } from "./ResponseHistoryList";
 import { formatDuration } from "./responseFormat";
+import { isNoAIContext } from "../lib/aiErrors";
 
 /** "current", "resp-<id>" (a history answer) or "pinned-<id>". */
 type TabId = "current" | `resp-${string}` | `pinned-${string}`;
@@ -34,6 +37,7 @@ export function AIResponsePanel() {
   const currentMode = useStreamStore((s) => s.currentMode);
   const currentId = useStreamStore((s) => s.currentId);
   const error = useStreamStore((s) => s.error);
+  const setError = useStreamStore((s) => s.setError);
   const currentSources = useStreamStore((s) => s.currentSources);
   const responseHistory = useStreamStore((s) => s.responseHistory);
   const pinnedResponses = useStreamStore((s) => s.pinnedResponses);
@@ -123,6 +127,32 @@ export function AIResponsePanel() {
     setHistoryOpen(false);
     historyButtonRef.current?.focus();
   }, []);
+
+  // Missing context is an expected, recoverable state, not a provider failure.
+  if (error && isNoAIContext(error)) {
+    return (
+      <div className="flex h-full items-center justify-center p-3" role="status">
+        <div className="relative w-full max-w-sm rounded-xl border border-border/50 bg-card/60 p-5 text-left">
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="absolute right-3 top-3 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+            aria-label="Dismiss message"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <MessageSquareText className="mb-3 h-5 w-5 text-primary/80" aria-hidden="true" />
+          <h3 className="pr-6 text-sm font-semibold text-foreground">Waiting for context</h3>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            There is no transcript or question available for this action yet.
+          </p>
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            Wait for speech to appear in the transcript, or use <strong className="text-foreground">Ask</strong> to type a question. If the transcript is already visible, check this action's context settings and selected scope.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Error state
   if (error) {

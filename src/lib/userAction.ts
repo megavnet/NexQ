@@ -11,6 +11,7 @@ import type { IntelligenceMode } from "./types";
 import { useConfigStore } from "../stores/configStore";
 import { useStreamStore } from "../stores/streamStore";
 import { useAIActionsStore } from "../stores/aiActionsStore";
+import { isNoAIContext } from "./aiErrors";
 
 /** The name the action row shows for `mode` ("F/U", a custom action's name...). */
 export function actionLabel(mode: string): string {
@@ -39,6 +40,8 @@ export async function runUserAction(mode: string, customQuestion?: string): Prom
     await generateAssist(mode, customQuestion, { requestId, scope });
   } catch (err) {
     useStreamStore.getState().clearPending(requestId);
+    // The response panel already shows this recoverable state; don't also toast it.
+    if (isNoAIContext(err)) return;
     throw err;
   }
 }

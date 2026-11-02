@@ -28,7 +28,7 @@ function isPersistable(e: LogEntry): boolean {
   return e.status === "complete" || (e.status === "cancelled" && !!(e.responseContentClean || e.responseContent));
 }
 
-export function useCallLogCapture() {
+export function useCallLogCapture(persistInteractions = true) {
   useEffect(() => {
     const unlisteners: Array<Promise<() => void>> = [];
     // request_id → log entry id, kept until the stream's end or error.
@@ -168,7 +168,7 @@ export function useCallLogCapture() {
           store.completeEntry(entryId, event.total_tokens, event.latency_ms, event.usage ?? null);
         }
         // Immediately persist all answered AI interactions to DB (crash protection)
-        persist();
+        if (persistInteractions) persist();
       })
     );
 
@@ -190,5 +190,5 @@ export function useCallLogCapture() {
       entryIds.clear();
       unlisteners.forEach((p) => p.then((unlisten) => unlisten()));
     };
-  }, []);
+  }, [persistInteractions]);
 }

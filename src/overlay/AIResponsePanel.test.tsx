@@ -5,6 +5,7 @@ vi.mock("@tauri-apps/plugin-store", () => ({
   load: async () => ({ get: async () => undefined, set: async () => {}, onKeyChange: async () => () => {} }),
 }));
 
+import { NO_AI_CONTEXT } from "../lib/aiErrors";
 import { AIResponsePanel } from "./AIResponsePanel";
 import { useStreamStore } from "../stores/streamStore";
 import { useMeetingStore } from "../stores/meetingStore";
@@ -113,5 +114,25 @@ describe("AIResponsePanel", () => {
     });
     expect(screen.queryByText("Writing…")).toBeNull();
     expect(screen.getByText("Last 5 min · 1.2 s · first words 0.6 s")).toBeInTheDocument();
+  });
+});
+
+describe("AIResponsePanel missing context", () => {
+  beforeEach(() => useStreamStore.getState().resetForMeeting());
+
+  it("offers a dismissible explanation when the action has no context", () => {
+    useStreamStore.getState().setError(NO_AI_CONTEXT);
+    render(<AIResponsePanel />);
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for context");
+    expect(screen.getByText(/Wait for speech to appear/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss message" }));
+    expect(screen.queryByText("Waiting for context")).not.toBeInTheDocument();
+  });
+
+  it("continues to show actual provider errors", () => {
+    useStreamStore.getState().setError("Connection failed");
+    render(<AIResponsePanel />);
+    expect(screen.getByText("Connection failed")).toBeInTheDocument();
+    expect(screen.queryByText("Waiting for context")).not.toBeInTheDocument();
   });
 });

@@ -181,6 +181,11 @@ impl IntelligenceEngine {
             .map(|m| m.content.clone())
             .unwrap_or_default();
 
+        // Counts and flags only: never log transcript, prompts, or credentials.
+        log::info!("AI request: mode={}, provider={}, transcript_segments={}/{}, include_transcript={}, include_question={}, user_prompt_chars={}",
+            mode, provider_name, transcript_segments_count, transcript_segments_total,
+            include_transcript, include_question, user_msg.chars().count());
+
         // Emit stream start with actual prompt data
         let _ = app_handle.emit(
             "llm_stream_start",
@@ -189,7 +194,7 @@ impl IntelligenceEngine {
                 model: model.clone(),
                 provider: provider_name.clone(),
                 system_prompt: system_msg,
-                user_prompt: user_msg,
+                user_prompt: user_msg.clone(),
                 include_transcript,
                 include_rag,
                 include_instructions,
@@ -207,6 +212,12 @@ impl IntelligenceEngine {
                 scope_label,
             },
         );
+
+        if user_msg.trim().is_empty() {
+            let message = "No meeting transcript or question is available yet. Check your audio input, wait for speech to appear, or enter a question using Ask.";
+            crate::llm::provider::emit_error(&app_handle, &params, message);
+            return Err(message.to_string());
+        }
 
         // Call the LLM provider's stream_completion
         let provider_guard = llm_provider.lock().await;
