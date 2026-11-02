@@ -2,10 +2,10 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
-  # Also run on main so the README CI badge reflects the default branch.
+    branches: [main, master]
+  # Check both branches and build the Mac app when master is updated.
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -55,7 +55,7 @@ jobs:
         working-directory: src-tauri
 
   check-macos:
-    runs-on: macos-14 # Apple Silicon
+    runs-on: macos-15 # Apple Silicon
     steps:
       - uses: actions/checkout@v7
 
@@ -86,3 +86,16 @@ jobs:
         run: |
           source ../scripts/macos-env.sh
           cargo check
+
+      - name: Build macOS app and DMG
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
+        run: bash ./build-mac.sh --no-install
+
+      - name: Upload macOS Apple Silicon DMG
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
+        uses: actions/upload-artifact@v4
+        with:
+          name: NexQ-macOS-Apple-Silicon
+          path: src-tauri/target/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 14
